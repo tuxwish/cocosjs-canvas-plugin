@@ -1,0 +1,91 @@
+<html>
+  <head>
+    <style>
+      body {
+        background: #282828;
+        margin: 0;
+        padding: 0;
+        color: white;
+        font-size: 12px;
+        font-weight: 500;
+        display: flex;
+        flex-direction: column !important;
+        position: relative;
+      }
+      #main-wrapper {
+        display: flex;
+        flex-direction: column !important;
+        position: relative;
+      }
+      #top-panel {
+        background: #3c3c3c;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: end;
+        padding-right: 12px;
+      }
+      #center-panel {
+        flex: 1;
+      }
+
+       /* Remove default bullets */
+      ul, #tree-list-view {
+        list-style-type: none;
+      }
+
+      /* Remove margins and padding from the parent ul */
+      #tree-list-view {
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Style the caret/arrow */
+      .caret {
+        cursor: pointer;
+        user-select: none; /* Prevent text selection */
+      }
+
+      /* Create the caret/arrow with a unicode, and style it */
+      .caret::before {
+        content: "\25B6";
+        color: black;
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      /* Rotate the caret/arrow icon when clicked on (using JavaScript) */
+      .caret-down::before {
+        transform: rotate(90deg);
+      }
+
+      /* Hide the nested list */
+      .nested {
+        display: none;
+      }
+
+      /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
+      .active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="main-wrapper">
+      <div id="top-panel">
+        <div id="wrapper">
+          <span>Actions:</span>
+        </div>
+        <div id="actions">
+          <button id="start-button">Start</button>
+          <button id="stop-button">Stop</button>
+        </div>
+      </div>
+      <div id="center-panel">
+        Main block 1
+        <div id="content-wrapper"></div>
+      </div>
+    </div>
+    <script src="panel.js"></script>
+  </body>
+</html>

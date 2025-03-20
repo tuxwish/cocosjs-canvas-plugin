@@ -1,0 +1,18 @@
+{
+  "name": "PocoCanvas",
+  "description": "Extension to check content of Cocos.JS canvas using Poco integration",
+  "version": "0.1",
+  "devtools_page": "devtools.html",
+  "manifest_version": 3,
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost:7456/*"]
+  }
+}
