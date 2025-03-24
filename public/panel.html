@@ -11,11 +11,13 @@
         display: flex;
         flex-direction: column !important;
         position: relative;
+        overflow: hidden;
       }
       #main-wrapper {
         display: flex;
         flex-direction: column !important;
         position: relative;
+        min-height: 100%;
       }
       #top-panel {
         background: #3c3c3c;
@@ -43,13 +45,13 @@
       /* Style the caret/arrow */
       .caret {
         cursor: pointer;
-        user-select: none; /* Prevent text selection */
+        user-select: none;
       }
 
       /* Create the caret/arrow with a unicode, and style it */
       .caret::before {
         content: "\25B6";
-        color: black;
+        color: white;
         display: inline-block;
         margin-right: 6px;
       }
@@ -62,11 +64,29 @@
       /* Hide the nested list */
       .nested {
         display: none;
+        flex-direction: column;
       }
 
       /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
-      .active {
+      .nested.active {
+        display: flex;
+      }
+      #content-wrapper {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+      }
+      .action-button {
+        display: none;
+      }
+      .action-button.active {
         display: block;
+      }
+      #top-tree-panel-wrapper {
+        flex: 1;
+      }
+      #bottom-properties-panel-wrapper {
+        flex: 1;
       }
     </style>
   </head>
@@ -77,13 +97,15 @@
           <span>Actions:</span>
         </div>
         <div id="actions">
-          <button id="start-button">Start</button>
-          <button id="stop-button">Stop</button>
+          <button class="action-button active" id="start-button">Start</button>
+          <button class="action-button" id="stop-button">Stop</button>
         </div>
       </div>
       <div id="center-panel">
-        Main block 1
-        <div id="content-wrapper"></div>
+        <div id="content-wrapper">
+          <div id="top-tree-panel-wrapper"></div>
+          <div id="bottom-properties-panel-wrapper"></div>
+        </div>
       </div>
     </div>
     <script src="panel.js"></script>

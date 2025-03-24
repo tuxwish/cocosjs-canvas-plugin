@@ -19,36 +19,70 @@ console.log(`start panel id ${chrome.runtime.id}`);
 
 let interval: any;
 
-const parseTreeChild = (data: any): string => {
-  if (!data.children?.length) return '';
-  const parsedHTML = data.children.map((child: any) => {
+const parseElementClick = (item: any) => {
+  console.log('parseElementClick', item);
+  if (propertiesPanelWrapper) {
+    propertiesPanelWrapper.innerHTML = '';
+    propertiesPanelWrapper.innerHTML = JSON.stringify(item);  
+  }
+}
+
+const parseTreeChild = (data: any): any => {
+  if (!data.children?.length) return;
+  const listArray = data.children.map((child: any) => {
+    const liElement = document.createElement('li');
     if (!child.children?.length) {
-      return `<li>${child.name}</li>`;
+      const listEmptySpan = document.createElement('span');
+      listEmptySpan.textContent = child.name;
+      listEmptySpan.addEventListener('click', () => parseElementClick(child));
+      liElement.appendChild(listEmptySpan);
+    } else {
+      const caretSpan = document.createElement('span');
+      caretSpan.classList.add('caret');
+      const span = document.createElement('span');
+      span.textContent = child.name;
+      span.addEventListener('click', () => parseElementClick(child));
+      const nestedList = document.createElement('ul');
+      nestedList.classList.add('nested');
+
+      const nestedElements = parseTreeChild(child);
+      nestedElements.forEach((nestedChild: any) => {
+        nestedList.appendChild(nestedChild);
+      });
+
+      liElement.appendChild(caretSpan);
+      liElement.appendChild(span);
+      liElement.appendChild(nestedList);
     }
-    return `
-      <span class="caret">${child.name}</span>
-      <ul class="nested">
-        ${parseTreeChild(child)}
-      </ul>
-    `;
+    return liElement;
   });
-  return parsedHTML.join('');
+  return listArray;
 };
 
-const parseDataIntoHTMLTree = (data: any) => {
-  return `
-    <ul id="tree-list-view">
-      <li>
-        <span class="caret">${data.name}</span>
-        <ul class="nested">
-          ${parseTreeChild(data)}
-        </ul>
-      </li>
-    </ul> 
-  `;
+const parseDataIntoHTMLTree = (data: any): HTMLUListElement => {
+  const ulList = document.createElement('ul');
+  ulList.id = "tree-list-view";
+  const topLiElement = document.createElement('li');
+  const topElementCaret = document.createElement('span');
+  topElementCaret.classList.add('caret');
+  topElementCaret.textContent = data.name;
+  topLiElement.appendChild(topElementCaret);
+  const nestedUlList = document.createElement('ul');
+  nestedUlList.classList.add('nested');
+
+  const listChilds = parseTreeChild(data);
+  listChilds.forEach((listChild: any) => {
+    nestedUlList.appendChild(listChild);    
+  });
+
+  topLiElement.appendChild(nestedUlList);
+  ulList.appendChild(topLiElement);
+  return ulList;
 };
 
-const runStartButtonClick = () => {
+const runStartButtonClick = function (this: Element) {
+  this.classList.toggle('active');
+  stopBtn?.classList.toggle('active');
   console.log('running eval');
   chrome.devtools.inspectedWindow.eval(
     initializingFunctionsCommand,
@@ -71,8 +105,9 @@ const runStartButtonClick = () => {
           return;
         }
         console.log('result', result);
-        if (contentWrapper && result) {
-          contentWrapper.innerHTML = parseDataIntoHTMLTree(result);
+        if (treePanelWrapper && result) {
+          treePanelWrapper.appendChild(parseDataIntoHTMLTree(result));
+          // treePanelWrapper.innerHTML = parseDataIntoHTMLTree(result);
           const togglers = document.getElementsByClassName('caret');
 
           for (let toggler of togglers) {
@@ -87,14 +122,17 @@ const runStartButtonClick = () => {
   }, 3000);
 };
 
-const runStopButtonClick = () => {
+const runStopButtonClick = function (this: Element) {
   console.log('stopping script');
   clearInterval(interval);
   interval = null;
+  this.classList.toggle('active');
+  startBtn?.classList.toggle('active');
 };
 
+const treePanelWrapper = document.getElementById('top-tree-panel-wrapper');
+const propertiesPanelWrapper = document.getElementById('bottom-properties-panel-wrapper');
 const startBtn = document.getElementById('start-button');
-const contentWrapper = document.getElementById('content-wrapper');
 const stopBtn = document.getElementById('stop-button');
 startBtn?.addEventListener('click', runStartButtonClick);
 stopBtn?.addEventListener('click', runStopButtonClick);
