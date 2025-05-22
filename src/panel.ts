@@ -140,7 +140,7 @@ const runStartButtonClick = function (this: Element) {
   stopBtn?.classList.toggle('active');
 
   interval = setInterval(() => {
-    console.log('interval start');
+    console.log('interval start', runDumpCommand.length);
     actionLoader?.classList.add('visible');
     chrome.devtools.inspectedWindow.eval(
       runDumpCommand,
