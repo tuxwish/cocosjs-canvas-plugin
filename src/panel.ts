@@ -1,5 +1,7 @@
 import { initializingFunctionsCommand, runDumpCommand } from './commands';
 
+const DEFAULT_UPDATE_TIME = 3000;
+
 console.log(`start panel id ${chrome.runtime.id}`);
 
 // chrome.runtime.onMessage.addListener(
@@ -19,11 +21,63 @@ console.log(`start panel id ${chrome.runtime.id}`);
 
 let interval: any;
 
-const parseElementClick = (item: any) => {
+const parseElementClick = (event: any, item: any) => {
   console.log('parseElementClick', item);
+  document.querySelectorAll('span.nested-name.selected').forEach((selectedItem: Element) => {
+    selectedItem.classList.remove('selected');
+  });
+  chrome.devtools.inspectedWindow.eval(
+    `
+      (async () => {
+        while (cc.find('Canvas').getChildByName('RedBorder')) {
+          console.log('while');
+          cc.find('Canvas').getChildByName('RedBorder').destroy();
+          await window.delay(10);
+        }
+      })();
+    `,
+    (result: any, isException) => {
+      if (isException?.isException) {
+        console.error(`Exception: ${isException.value}`);
+      }
+    }
+  );
+  event.target.classList.add('selected');
+  console.log(`test ${item.payload.fullPath} ${typeof item.payload.fullPath}`);
+  console.log(`
+    (async () => {
+        await window.delay(500);
+        selectedNode = cc.find('${item.payload.fullPath}');
+        console.log('selectedNode', selectedNode, '${item.payload.fullPath}');
+        showRedBorderOver(selectedNode);
+      })();
+    `);
+  chrome.devtools.inspectedWindow.eval(
+    `
+      (async () => {
+        await window.delay(500);
+        selectedNode = cc.find('${item.payload.fullPath}');
+        console.log('selectedNode', selectedNode, '${item.payload.fullPath}');
+        showRedBorderOver(selectedNode);
+      })();
+    `,
+    (result: any, isException) => {
+      if (isException?.isException) {
+        console.error(`Exception: ${isException.value}`);
+      }
+    }
+  );
   if (propertiesPanelWrapper) {
     propertiesPanelWrapper.innerHTML = '';
-    propertiesPanelWrapper.innerHTML = JSON.stringify(item);  
+    propertiesPanelWrapper.innerHTML = `
+      <div id="payload-properties-table">
+        ${Object.keys(item.payload).map((propertyKey) => `
+          <div class="payload-properties-table-item">
+            <div class="payload-properties-table-item-name">${propertyKey}:</div>
+            <div class="payload-properties-table-item-value">${item.payload[propertyKey]}</div>
+          </div>
+        `).join('')}
+      </div>`;
   }
 }
 
@@ -34,14 +88,15 @@ const parseTreeChild = (data: any): any => {
     if (!child.children?.length) {
       const listEmptySpan = document.createElement('span');
       listEmptySpan.textContent = child.name;
-      listEmptySpan.addEventListener('click', () => parseElementClick(child));
+      listEmptySpan.addEventListener('click', (event) => parseElementClick(event, child));
       liElement.appendChild(listEmptySpan);
     } else {
       const caretSpan = document.createElement('span');
       caretSpan.classList.add('caret');
       const span = document.createElement('span');
+      span.classList.add('nested-name');
       span.textContent = child.name;
-      span.addEventListener('click', () => parseElementClick(child));
+      span.addEventListener('click', (event) => parseElementClick(event, child));
       const nestedList = document.createElement('ul');
       nestedList.classList.add('nested');
 
@@ -83,20 +138,10 @@ const parseDataIntoHTMLTree = (data: any): HTMLUListElement => {
 const runStartButtonClick = function (this: Element) {
   this.classList.toggle('active');
   stopBtn?.classList.toggle('active');
-  console.log('running eval');
-  chrome.devtools.inspectedWindow.eval(
-    initializingFunctionsCommand,
-    (result, isException) => {
-      if (isException?.isException) {
-        console.error(`Exception: ${isException.value}`);
-        return;
-      }
-      console.log('result', result);
-    }
-  );
 
   interval = setInterval(() => {
     console.log('interval start');
+    actionLoader?.classList.add('visible');
     chrome.devtools.inspectedWindow.eval(
       runDumpCommand,
       (result: any, isException) => {
@@ -106,8 +151,8 @@ const runStartButtonClick = function (this: Element) {
         }
         console.log('result', result);
         if (treePanelWrapper && result) {
+          treePanelWrapper.innerHTML = '';
           treePanelWrapper.appendChild(parseDataIntoHTMLTree(result));
-          // treePanelWrapper.innerHTML = parseDataIntoHTMLTree(result);
           const togglers = document.getElementsByClassName('caret');
 
           for (let toggler of togglers) {
@@ -117,9 +162,10 @@ const runStartButtonClick = function (this: Element) {
             });
           }
         }
+        actionLoader?.classList.remove('visible');
       }
     );
-  }, 3000);
+  }, Number(intervalInput?.value) || DEFAULT_UPDATE_TIME);
 };
 
 const runStopButtonClick = function (this: Element) {
@@ -134,5 +180,22 @@ const treePanelWrapper = document.getElementById('top-tree-panel-wrapper');
 const propertiesPanelWrapper = document.getElementById('bottom-properties-panel-wrapper');
 const startBtn = document.getElementById('start-button');
 const stopBtn = document.getElementById('stop-button');
+const intervalInput = document.getElementById('update-interval-time') as HTMLInputElement;
+const actionLoader = document.getElementById('action-loader');
+
 startBtn?.addEventListener('click', runStartButtonClick);
 stopBtn?.addEventListener('click', runStopButtonClick);
+if (intervalInput) {
+  intervalInput.value = `${DEFAULT_UPDATE_TIME}`;
+}
+
+chrome.devtools.inspectedWindow.eval(
+  initializingFunctionsCommand,
+  (result, isException) => {
+    if (isException?.isException) {
+      console.error(`Exception: ${isException.value}`);
+      return;
+    }
+    console.log('result', result);
+  }
+);

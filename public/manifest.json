@@ -1,7 +1,7 @@
 {
-  "name": "PocoCanvas",
-  "description": "Extension to check content of Cocos.JS canvas using Poco integration",
-  "version": "0.1",
+  "name": "CocosJSCanvas",
+  "description": "Extension to check content of Cocos.JS canvas",
+  "version": "0.2",
   "devtools_page": "devtools.html",
   "manifest_version": 3,
   "permissions": [

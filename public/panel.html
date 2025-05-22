@@ -71,10 +71,17 @@
       .nested.active {
         display: flex;
       }
+      .nested-name {
+        cursor: pointer;
+      }
+      .nested-name.selected {
+        background: #5b7edf;
+      }
       #content-wrapper {
         display: flex;
         flex-direction: column;
         min-height: 100%;
+        height: 100%;
       }
       .action-button {
         display: none;
@@ -83,10 +90,62 @@
         display: block;
       }
       #top-tree-panel-wrapper {
-        flex: 1;
+        flex: 1 1 0;
+        padding: 10px;
+        position: relative;
+        overflow-y: auto;
+        min-height: 0;
       }
       #bottom-properties-panel-wrapper {
+        flex: 1 1 0;
+        border-top: 1px solid #5e5e5e;
+        position: relative;
+        overflow-y: auto;
+        min-height: 0;
+      }
+      #actions {
+        margin-right: 30px;
+      }
+      #actions-properties-wrapper {
+        margin-left: 10px;
+        margin-right: 10px;
+      }
+      #update-interval-time {
+        width: 60px;
+      }
+      #action-loader {
+        position: absolute;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #5f6368;
+        border-radius: 50%;
+        width: 14px;
+        height: 14px;
+        animation: spin 2s linear infinite;
+        margin-left: 10px;
+        display: none;
+      }
+      #action-loader.visible {
+        display: block;
+      }
+      .payload-properties-table-item {
+        height: 20px;
+        border-top: 1px solid #5e5e5e;
+        padding: 0 10px;
+        display: flex;
+      }
+      .payload-properties-table-item:last-child {
+        border-bottom: 1px solid #5e5e5e;
+      }
+      .payload-properties-table-item-name {
+        width: 100px;
+      }
+      .payload-properties-table-item-value {
         flex: 1;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
     </style>
   </head>
@@ -96,10 +155,14 @@
         <div id="wrapper">
           <span>Actions:</span>
         </div>
+        <div id="actions-properties-wrapper">
+          <input id="update-interval-time" type="number" value="" />
+        </div>
         <div id="actions">
           <button class="action-button active" id="start-button">Start</button>
           <button class="action-button" id="stop-button">Stop</button>
         </div>
+        <div id="action-loader"></div>
       </div>
       <div id="center-panel">
         <div id="content-wrapper">
