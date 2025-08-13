@@ -24,7 +24,7 @@ export const initializingFunctionsCommand = `
           fullPath: '',
           type: 'Root',
           visible: true,
-          pos: [0.0, 0.0],
+          position: [0.0, 0.0, 0.0],
           world_position: [0.0, 0.0],
           size: [0.0, 0.0],
           world_size: [0.0, 0.0],
@@ -34,6 +34,7 @@ export const initializingFunctionsCommand = `
           opacity: 0,
           sprite: '',
           animation: {},
+          widget: {},
         };
 
         return attrs[attrName];
@@ -53,7 +54,7 @@ export const initializingFunctionsCommand = `
           'fullPath',
           'type',
           'visible',
-          'pos',
+          'position',
           'size',
           'scale',
           'anchorPoint',
@@ -63,6 +64,7 @@ export const initializingFunctionsCommand = `
           'animation',
           'world_position',
           'world_size',
+          'widget',
         ];
       }
 
@@ -183,20 +185,17 @@ export const initializingFunctionsCommand = `
               ntype = 'Object';
             }
             return ntype.replace(/\w+\./, '');
-          } else if (attrName === 'pos') {
-            const pos = this.node.getWorldPosition();
-            pos.x /= this.screenWidth;
-            pos.y /= this.screenHeight;
-            pos.y = 1 - pos.y;
-            return [pos.x, pos.y];
+          } else if (attrName === 'position') {
+            const pos = this.node.getPosition();
+            return [pos.x, pos.y, pos.z];
           } else if (attrName === 'world_position') {
             const pos = this.node.getWorldPosition();
             return [pos.x, pos.y];
           } else if (attrName === 'size') {
             if (this.node.getComponent('cc.UITransform')) {
               const size = new cc.Size(this.node.getComponent('cc.UITransform').width, this.node.getComponent('cc.UITransform').height);
-              size.width /= this.screenWidth;
-              size.height /= this.screenHeight;
+              // size.width /= this.screenWidth;
+              // size.height /= this.screenHeight;
               return [size.width, size.height];
             }
             return [0, 0];
@@ -207,7 +206,8 @@ export const initializingFunctionsCommand = `
             }
             return [0, 0];
           } else if (attrName === 'scale') {
-            return [cgetter(this.node, 'scaleX'), cgetter(this.node, 'scaleY')];
+            const scale = this.node.scale;
+            return [scale.x, scale.y, scale.z];
           } else if (attrName === 'anchorPoint') {
             if (this.node.getComponent('cc.UITransform')) {
               return [this.node.getComponent('cc.UITransform').anchorX, this.node.getComponent('cc.UITransform').anchorY];
@@ -259,6 +259,25 @@ export const initializingFunctionsCommand = `
                       played: false,
                     };
                   }) || [],
+              };
+            }
+            return {};
+          } else if (attrName === 'widget') {
+            if (this.node.getComponent('cc.Widget')) {
+              const nodeWidget = this.node.getComponent('cc.Widget');
+              return {
+                isAbsoluteBottom: nodeWidget.isAbsoluteBottom,
+                isAbsoluteLeft: nodeWidget.isAbsoluteLeft,
+                isAbsoluteRight: nodeWidget.isAbsoluteRight,
+                isAbsoluteTop: nodeWidget.isAbsoluteTop,
+                isAlignBottom: nodeWidget.isAlignBottom,
+                isAlignLeft: nodeWidget.isAlignLeft,
+                isAlignRight: nodeWidget.isAlignRight,
+                isAlignTop: nodeWidget.isAlignTop,
+                top: nodeWidget.top,
+                left: nodeWidget.left,
+                right: nodeWidget.right,
+                bottom: nodeWidget.bottom,
               };
             }
             return {};
@@ -315,7 +334,73 @@ export const initializingFunctionsCommand = `
       }
     }
 
-    window.showRedBorderOver = (selectedNode) => {
+    window.calculateNodePosition = (selectedNode, isTopParentNode, topNodePosition) => {
+      const nodePosition = !isTopParentNode && topNodePosition ? topNodePosition : selectedNode.getPosition();
+      const localScale = selectedNode.scale;
+      if (localScale.x) {
+        nodePosition.x *= localScale.x;
+      }
+      if (localScale.y) {
+        nodePosition.y *= localScale.y;
+      }
+      if (localScale.z) {
+        nodePosition.z *= localScale.z;
+      }
+
+      if (!isTopParentNode) {
+        return nodePosition;
+      }
+
+      const nodeAnchorPoint = selectedNode.getComponent('cc.UITransform').anchorPoint;
+      const nodeWidth = selectedNode.getComponent('cc.UITransform').width;
+      const nodeHeight = selectedNode.getComponent('cc.UITransform').height;
+      if (nodeAnchorPoint.y === 0) {
+      } else if (nodeAnchorPoint.y === 1) {
+        nodePosition.y -= nodeHeight / 2;
+      }
+
+      return nodePosition;
+    }
+
+    window.getNodePosition = (selectedNode, nodeFullPath) => {
+      const parsedPath = nodeFullPath.split('/');
+
+      let pathIndex = 1;
+      let nodePathToCalculate = parsedPath[0] + '/' + parsedPath[1];
+      let isTopParentNode = nodePathToCalculate === nodeFullPath;
+      const nodePositionToCalculate = cc.find(nodePathToCalculate);
+      let nodePosition = window.calculateNodePosition(nodePositionToCalculate, isTopParentNode);
+      while (pathIndex < parsedPath.length - 1) {
+        isTopParentNode = nodePathToCalculate === nodeFullPath;
+        const nodePositionToCalculate = cc.find(nodePathToCalculate);
+        nodePosition = window.calculateNodePosition(nodePositionToCalculate, isTopParentNode, nodePosition);
+        pathIndex++;
+        nodePathToCalculate += '/' + parsedPath[pathIndex];
+      }
+
+      if (isTopParentNode) {
+        return nodePosition;
+      }
+
+      const nodeAnchorPoint = selectedNode.getComponent('cc.UITransform').anchorPoint;
+      const nodeWidth = selectedNode.getComponent('cc.UITransform').width;
+      const nodeHeight = selectedNode.getComponent('cc.UITransform').height;
+      const localScale = selectedNode.scale;
+      if (nodeAnchorPoint.x === 0) {
+        nodePosition.x += nodeWidth / 2 * localScale.x;
+      } else if (nodeAnchorPoint.x === 1) {
+        nodePosition.x -= nodeWidth / 2 * localScale.x;
+      }
+      if (nodeAnchorPoint.y === 1) {
+        nodePosition.y -= nodeHeight / 2 * localScale.y;
+      }
+
+      nodePosition.x += selectedNode.position.x;
+      nodePosition.y += selectedNode.position.y;
+      return nodePosition;
+    }
+
+    window.showRedBorderOver = (selectedNode, nodeFullPath) => {
       const canvas = cc.director.getScene().getChildByName('Canvas');
       if (!canvas || !selectedNode) return;
 
@@ -325,30 +410,31 @@ export const initializingFunctionsCommand = `
       const graphics = borderNode.addComponent('cc.Graphics'); // Used to draw shapes
 
       // Set anchor and position to match the selected node
-      if (selectedNode.getPosition().x === 0 && selectedNode.getPosition().y === 0) {
-        console.log('set world position');
-        borderNode.setWorldPosition(selectedNode.getWorldPosition());
-      } else {
-        borderNode.getComponent('cc.UITransform').setAnchorPoint(selectedNode.getComponent('cc.UITransform').anchorPoint);
-        console.log('set simple position');
-        borderNode.setPosition(selectedNode.getPosition());
-      }
-      
-      borderNode.getComponent('cc.UITransform').setContentSize(selectedNode.getComponent('cc.UITransform').contentSize);
-
-      // Optional: match rotation and scale if needed
-      borderNode.setScale(selectedNode.getScale());
-      borderNode.angle = selectedNode.angle;
+      // if (selectedNode.getPosition().x === 0 && selectedNode.getPosition().y === 0) {
+      //   borderNode.setWorldPosition(selectedNode.getWorldPosition());
+      // } else {
+        // borderNode.getComponent('cc.UITransform').setAnchorPoint(selectedNode.getComponent('cc.UITransform').anchorPoint);
+        // const nodePosition = window.getNodePosition(selectedNode, nodeFullPath);
+        // borderNode.setPosition(nodePosition);
+      // }
 
       // Add to canvas
       canvas.addChild(borderNode);
 
       // Draw red rectangle
-      graphics.lineWidth = 10;
+      graphics.lineWidth = 10 / selectedNode.getScale().x;
       graphics.strokeColor = cc.Color.RED;
       const size = selectedNode.getComponent('cc.UITransform').contentSize;
       graphics.rect(-size.width / 2, -size.height / 2, size.width, size.height);
       graphics.stroke();
+
+      borderNode.getComponent('cc.UITransform').setAnchorPoint(selectedNode.getComponent('cc.UITransform').anchorPoint);
+      borderNode.getComponent('cc.UITransform').setContentSize(selectedNode.getComponent('cc.UITransform').contentSize);
+      const worldPosition = selectedNode.getWorldPosition();
+      borderNode.setWorldPosition(worldPosition);
+
+      borderNode.setScale(selectedNode.getScale());
+      borderNode.angle = selectedNode.angle;
     }
 
     window.delay = (ms) => {

@@ -2,27 +2,16 @@ import { initializingFunctionsCommand, runDumpCommand } from './commands';
 
 const DEFAULT_UPDATE_TIME = 3000;
 
-console.log(`start panel id ${chrome.runtime.id}`);
-
-// chrome.runtime.onMessage.addListener(
-//   function(message, sender, sendResponse) {
-//     console.log('on message', message, sender, sendResponse);
-//     // do what you want to the message
-//     const body = document.querySelector("body");
-//     console.log('body 2', body);
-// });
-
-// chrome.runtime.onMessageExternal.addListener(
-//   function(request, sender, sendResponse) {
-//     console.log('on message', request, sender, sendResponse);
-//     const body = document.querySelector("body");
-//     console.log('body 3', body);
-// });
-
 let interval: any;
 
+const parseElementData = (data: any) => {
+  if (typeof data === 'object') {
+    return JSON.stringify(data, null, 2);
+  }
+  return data;
+}
+
 const parseElementClick = (event: any, item: any) => {
-  console.log('parseElementClick', item);
   document.querySelectorAll('span.nested-name.selected').forEach((selectedItem: Element) => {
     selectedItem.classList.remove('selected');
   });
@@ -30,7 +19,6 @@ const parseElementClick = (event: any, item: any) => {
     `
       (async () => {
         while (cc.find('Canvas').getChildByName('RedBorder')) {
-          console.log('while');
           cc.find('Canvas').getChildByName('RedBorder').destroy();
           await window.delay(10);
         }
@@ -43,22 +31,12 @@ const parseElementClick = (event: any, item: any) => {
     }
   );
   event.target.classList.add('selected');
-  console.log(`test ${item.payload.fullPath} ${typeof item.payload.fullPath}`);
-  console.log(`
-    (async () => {
-        await window.delay(500);
-        selectedNode = cc.find('${item.payload.fullPath}');
-        console.log('selectedNode', selectedNode, '${item.payload.fullPath}');
-        showRedBorderOver(selectedNode);
-      })();
-    `);
   chrome.devtools.inspectedWindow.eval(
     `
       (async () => {
         await window.delay(500);
         selectedNode = cc.find('${item.payload.fullPath}');
-        console.log('selectedNode', selectedNode, '${item.payload.fullPath}');
-        showRedBorderOver(selectedNode);
+        showRedBorderOver(selectedNode, '${item.payload.fullPath}');
       })();
     `,
     (result: any, isException) => {
@@ -74,7 +52,7 @@ const parseElementClick = (event: any, item: any) => {
         ${Object.keys(item.payload).map((propertyKey) => `
           <div class="payload-properties-table-item">
             <div class="payload-properties-table-item-name">${propertyKey}:</div>
-            <div class="payload-properties-table-item-value">${item.payload[propertyKey]}</div>
+            <div class="payload-properties-table-item-value">${parseElementData(item.payload[propertyKey])}</div>
           </div>
         `).join('')}
       </div>`;
@@ -140,7 +118,6 @@ const runStartButtonClick = function (this: Element) {
   stopBtn?.classList.toggle('active');
 
   interval = setInterval(() => {
-    console.log('interval start', runDumpCommand.length);
     actionLoader?.classList.add('visible');
     chrome.devtools.inspectedWindow.eval(
       runDumpCommand,
@@ -149,7 +126,6 @@ const runStartButtonClick = function (this: Element) {
           console.error(`Exception: ${isException.value}`);
           return;
         }
-        console.log('result', result);
         if (treePanelWrapper && result) {
           treePanelWrapper.innerHTML = '';
           treePanelWrapper.appendChild(parseDataIntoHTMLTree(result));
@@ -169,7 +145,6 @@ const runStartButtonClick = function (this: Element) {
 };
 
 const runStopButtonClick = function (this: Element) {
-  console.log('stopping script');
   clearInterval(interval);
   interval = null;
   this.classList.toggle('active');
@@ -194,8 +169,6 @@ chrome.devtools.inspectedWindow.eval(
   (result, isException) => {
     if (isException?.isException) {
       console.error(`Exception: ${isException.value}`);
-      return;
     }
-    console.log('result', result);
   }
 );
